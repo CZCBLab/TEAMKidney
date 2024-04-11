@@ -14,6 +14,9 @@ pip install -r requirements.txt
 
 # Usage
 ## Step 0. Use AI model to inference images
+
+The model and config file can be find [here](https://drive.google.com/drive/folders/1jfPfhizYpO7O-2XCnOmOKgmWpcWz-bGI?usp=drive_link)
+
 inference.py
 Args:
     inputImages(str): file path or folder path for the input images 
