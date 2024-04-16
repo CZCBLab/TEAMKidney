@@ -25,7 +25,7 @@ Args:
     isCPUonly(bool): True for using CPU, False for using GPU
         
 ## Step 1. Calculate FP width and GBM width
-inference.py
+measurement4mask.py
 Args:
     imagefilepath(str): folder path for the input images, files in imagefilepath and segfilepath should match perfectly except the suffix
     segfilepath(str): folder path for the predicted masks, files in imagefilepath and segfilepath should match perfectly except the suffix

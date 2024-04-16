@@ -9,7 +9,7 @@ import os
 import pandas as pd
 from skimage.morphology import skeletonize, medial_axis
 from skimage import measure, morphology
-from tqdm import tqdm
+#from tqdm import tqdm
 import networkx as nx
 from PIL import Image
 
@@ -248,8 +248,9 @@ def GBM_measures_cal(GBM_ins):
     GBM_ins = measure.label(GBM_ins, connectivity=2)
     GBM_n = np.max(GBM_ins)
     if GBM_n == 0:
-        print("There is no GBM in this image!")
-        return 1
+        #print("There is no GBM in this image!")
+        #return 1
+        raise Exception("There is no GBM in this image!")
 
     ## calculate the GBM width
     skeleton_img = np.zeros(im_shape,dtype=np.uint8)
@@ -257,6 +258,8 @@ def GBM_measures_cal(GBM_ins):
     GBM_seg_dic = {}
     GBM_seg_dic['skeleton_length'] = 0
     GBM_seg_dic['area'] = 0
+
+    print("GBM_n is: " + str(GBM_n))
     for i in range(GBM_n):
         ins = np.zeros(im_shape)
         ins[np.where(GBM_ins == i+1)] = True
@@ -266,10 +269,12 @@ def GBM_measures_cal(GBM_ins):
         ins_dilated = cv2.dilate(ins, kernel, iterations=1)
         ins = ins.astype(np.uint8)
         if np.sum(ins) < 1000:
+            print(f"in loop {i}/{GBM_n}, np.sum(ins) was < 1000, continuing")
             continue
         GBM_im_new = np.maximum(GBM_im_new, ins)
         skeleton = skeletonize(ins)
         if np.sum(skeleton) < 500:
+            print(f"in loop {i}/{GBM_n}, np.sum(skeleton) was < 500, continuing")
             continue
 
         GBM_contours = cv2.findContours(ins, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -289,6 +294,11 @@ def GBM_measures_cal(GBM_ins):
         GBM_seg_dic['area'] = GBM_seg_dic['area'] + np.sum(ins)
         # GBM_seg_dic['GBM_area'] = len(mask_pos[0])
         # GBM_seg_dic['GBM_mean_width'] = len(mask_pos[0])/len(pos[0])
+
+        # TODO: Ask Anqi whether this isn't supposed to be outside the loop perhaps.
+        # Otherwise, if hit 'continue' every time (see above) then we have
+        # (1) no "no GBM found" exception, but also (2) no GBM_seg_dic['GBM_mean_width'] value etc.
+        # Also TODO remove print statements above after conferring.
         if GBM_seg_dic['skeleton_length']:
             GBM_seg_dic['GBM_mean_width'] = GBM_seg_dic['area']/GBM_seg_dic['skeleton_length']
         else:
@@ -368,7 +378,8 @@ def save_maskon_image(image, GBM_img, FP_img, skeleton_img, FP_width_img, outfil
     image_rgb = np.stack([image] * 3, axis=-1)
     alpha = 0.5
     overlayed_image = (image_rgb * (1 - alpha) + colored_mask * alpha).astype(np.uint8)
-    Image.fromarray(overlayed_image).save(outfile)
+    #Image.fromarray(overlayed_image).save(outfile)
+    return Image.fromarray(overlayed_image)
 
 def FP_measures_cal(GBM_ins, FP_ins):
     im_shape = FP_ins.shape[0:2]
@@ -379,8 +390,9 @@ def FP_measures_cal(GBM_ins, FP_ins):
     # n_GBM = len(GBM_ins)
     n_GBM = np.max(GBM_ins)
     if n_GBM == 0:
-        print("There is no GBM in this image!")
-        return 1
+        #print("There is no GBM in this image!")
+        #return 1
+        raise Exception("There is no GBM in this image!")
     FP_seg_width = []
     FP_seg_dic = {}
     FP_seg_dic['FP_num'] = 0
@@ -434,7 +446,7 @@ def FP_measures_cal(GBM_ins, FP_ins):
 
 
 
-def main():
+def main(inputimage, inputseg, inputfilepath):
     imagefilepath = './test_data/images'
     segfilepath = './test_data/pred'
     outCSV = './test_data/width.csv'
@@ -446,52 +458,66 @@ def main():
     filelist = [file for file in os.listdir(segfilepath) if file.endswith(('tif','png'))]
     width_info_list = []
     FP_widths_json = []
-    for file in tqdm(filelist, desc='file'):
-        image_id = file.split('.')[0]
-        imagefile = os.path.join(imagefilepath,image_id+'.jpg')
-        segfilename = os.path.join(segfilepath, file)
-        segimage = cv2.imread(segfilename, cv2.IMREAD_COLOR)
-        GBM_im = np.zeros(segimage.shape[0:2])
-        GBM_im[(segimage[:, :, 2] > 0) & (segimage[:, :, 1] == 0) & (segimage[:, :, 0] == 0)] = True
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10))
-        GBM_im = cv2.morphologyEx(GBM_im, cv2.MORPH_CLOSE, kernel, iterations=1)
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10))
-        GBM_im = cv2.morphologyEx(GBM_im, cv2.MORPH_OPEN, kernel, iterations=1)
-        GBM_ins = measure.label(GBM_im, connectivity=2)
 
-        FP_im = np.zeros(segimage.shape[0:2])
-        FP_im[(segimage[:, :, 0] > 0) & (segimage[:, :, 1] == 0) & (segimage[:, :, 2] == 0)] = True
-        # Erode the FP to separate some close FPs, should be dilated later
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (FP_openning_kernel_size, FP_openning_kernel_size))
-        FP_im = cv2.morphologyEx(FP_im, cv2.MORPH_OPEN, kernel, iterations=1)
-        FP_ins = measure.label(FP_im, connectivity=1)
+    # Original: Reads from file:
+    #segimage = cv2.imread(segfilename, cv2.IMREAD_COLOR)
+    # Modification to take PIL Image as input: This raises an Assertion error
+    #segimage = cv2.imdecode(np.asarray(inputseg), cv2.IMREAD_COLOR)
+    # Therefore instead of cv2, just read as np array:
+    segimage = np.asarray(inputseg)
+    # Note: CV2 reads images to ABGR order (why?!) whereas np.asarray will read to RGB(A).
+    # So, in the following code, I have flipped the minor axis indices in Anqi's conditionals.
 
-        im_dict = {"image_id": file.split('.')[0]}
-        try:
-            GBM_im_new, skeleton_img, GBM_info = GBM_measures_cal(GBM_ins)
-            FP_width_img, FP_info, FP_widths = FP_measures_cal(GBM_ins, FP_ins)
-            width_info_list.append({**im_dict, **GBM_info, **FP_info})
-            outfile = os.path.join(outfig, file.split('.')[0]+'.png')
+    GBM_im = np.zeros(segimage.shape[0:2])
+    #GBM_im[(segimage[:, :, 2] > 0) & (segimage[:, :, 1] == 0) & (segimage[:, :, 0] == 0)] = True # BGR
+    GBM_im[(segimage[:, :, 0] > 0) & (segimage[:, :, 1] == 0) & (segimage[:, :, 2] == 0)] = True # RGB
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10))
+    GBM_im = cv2.morphologyEx(GBM_im, cv2.MORPH_CLOSE, kernel, iterations=1)
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10))
+    GBM_im = cv2.morphologyEx(GBM_im, cv2.MORPH_OPEN, kernel, iterations=1)
+    GBM_ins = measure.label(GBM_im, connectivity=2)
 
-            FP_widths_info = {}
-            FP_widths_info["image_id"] =image_id
-            FP_widths_info["FP_widths"] = FP_widths
-            FP_widths_json.append(FP_widths_info)
+    FP_im = np.zeros(segimage.shape[0:2])
+    #FP_im[(segimage[:, :, 0] > 0) & (segimage[:, :, 1] == 0) & (segimage[:, :, 2] == 0)] = True # BGR
+    FP_im[(segimage[:, :, 2] > 0) & (segimage[:, :, 1] == 0) & (segimage[:, :, 0] == 0)] = True # RGB
+    # Erode the FP to separate some close FPs, should be dilated later
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (FP_openning_kernel_size, FP_openning_kernel_size))
+    FP_im = cv2.morphologyEx(FP_im, cv2.MORPH_OPEN, kernel, iterations=1)
+    FP_ins = measure.label(FP_im, connectivity=1)
 
-            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-            FP_width_img = cv2.morphologyEx(FP_width_img, cv2.MORPH_DILATE, kernel, iterations=1)
-            skeleton_img = cv2.morphologyEx(skeleton_img, cv2.MORPH_DILATE, kernel, iterations=1)
-            # save_mask_image(outfile, GBM_im_new, FP_im, skeleton_img, FP_width_img)
-            image = Image.open(imagefile).convert('L')
-            save_maskon_image(image, GBM_im_new, FP_im, skeleton_img, FP_width_img, outfile)
-        except Exception as error:
-            print(error)
+    image_id = inputfilepath.split('/')[-1].split('.')[0]
+    im_dict = {"image_id": image_id}
 
-    with open(outjson, 'w') as file:
-        json.dump(FP_widths_json, file, indent=4)
+    try:
+        GBM_im_new, skeleton_img, GBM_info = GBM_measures_cal(GBM_ins)
+        FP_width_img, FP_info, FP_widths = FP_measures_cal(GBM_ins, FP_ins)
+        success = True
+        message = "OK"
+    except Exception as e:
+        # If x_measures_cal throws exception (e.g. no GBM in this image), forward that message through...
+        success = False
+        message = str(e)
+        return success, message, None, None, None
 
-    df = pd.DataFrame(width_info_list)
-    df.to_csv(outCSV, index=False)
+    width_info_list.append({**im_dict, **GBM_info, **FP_info})
+    #outfile = os.path.join(outfig, file.split('.')[0]+'.png')
 
-if __name__ == '__main__':
-    main()
+    FP_widths_info = {}
+    FP_widths_info["image_id"] = image_id
+    FP_widths_info["FP_widths"] = FP_widths
+    FP_widths_json.append(FP_widths_info)
+
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+    FP_width_img = cv2.morphologyEx(FP_width_img, cv2.MORPH_DILATE, kernel, iterations=1)
+    skeleton_img = cv2.morphologyEx(skeleton_img, cv2.MORPH_DILATE, kernel, iterations=1)
+    image = Image.open(inputimage).convert('L')
+    measurement_mask_img = save_maskon_image(image, GBM_im_new, FP_im, skeleton_img, FP_width_img, "outfile-unused")
+
+    #with open(outjson, 'w') as file:
+    #    json.dump(FP_widths_json, file, indent=4)
+
+    #df = pd.DataFrame(width_info_list)
+    #df.to_csv(outCSV, index=False)
+
+    return success, message, measurement_mask_img, FP_widths_json, width_info_list
+
