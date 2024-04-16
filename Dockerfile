@@ -21,6 +21,13 @@ RUN pip install "mmsegmentation>=1.0.0"
 COPY requirements.txt .
 RUN pip install -r requirements.txt
 
-COPY --parents flask-app.py /models /tools .
+# Model files too large for GitHub; pull from Google Drive.
+# (The image is built and hosted privately on Red Hat OpenShift.)
+ADD https://drive.usercontent.google.com/download?id=14KPOwVHZB9_V4u4Ih2MxgrgdQl-Pk_81&export=download&confirm=t models/convnext-base_upernet_8xb2-amp-160k_tem-512x512_cpu.py
+ADD https://drive.usercontent.google.com/download?id=1b5NeYgmJFd7Z1redf3TJUGL8_aol1oR4&export=download&confirm=t models/convnext-base_upernet_8xb2-amp-160k_tem-512x512.py
+# Do expect this GB-scale download to take 1-2 minutes
+ADD https://drive.usercontent.google.com/download?id=1Z0OVd7i5zo8IeNeRtLQcPtHoF6QH0ZXZ&export=download&confirm=t models/iter_64000.pth
+
+COPY --parents flask-app.py /tools .
 
 CMD flask --app flask-app.py run --host=0.0.0.0
