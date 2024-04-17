@@ -447,15 +447,6 @@ def FP_measures_cal(GBM_ins, FP_ins):
 
 
 def main(inputimage, inputseg, inputfilepath):
-    imagefilepath = './test_data/images'
-    segfilepath = './test_data/pred'
-    outCSV = './test_data/width.csv'
-    outfig = './test_data/figs'
-    outjson = './test_data/FPwidths.json'
-
-    if not os.path.isdir(outfig):
-        os.mkdir(outfig)
-    filelist = [file for file in os.listdir(segfilepath) if file.endswith(('tif','png'))]
     width_info_list = []
     FP_widths_json = []
 
