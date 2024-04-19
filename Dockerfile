@@ -1,7 +1,3 @@
-# syntax=docker/dockerfile:1.7-labs
-# ^ the COPY "--parents" flag is not yet available in stable syntax
-# See https://docs.docker.com/reference/dockerfile/#copy---parents
-
 FROM python:3.11
 
 WORKDIR /app
@@ -28,6 +24,7 @@ ADD https://drive.usercontent.google.com/download?id=1b5NeYgmJFd7Z1redf3TJUGL8_a
 # Do expect this GB-scale download to take 1-2 minutes
 ADD https://drive.usercontent.google.com/download?id=1Z0OVd7i5zo8IeNeRtLQcPtHoF6QH0ZXZ&export=download&confirm=t models/iter_64000.pth
 
-COPY --parents flask-app.py /tools .
+COPY tools/inference.py tools/measurement4mask.py tools/
+COPY flask-app.py .
 
 CMD flask --app flask-app.py run --host=0.0.0.0
