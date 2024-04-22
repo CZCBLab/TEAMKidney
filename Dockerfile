@@ -27,9 +27,9 @@ ADD https://drive.usercontent.google.com/download?id=1Z0OVd7i5zo8IeNeRtLQcPtHoF6
 COPY tools/inference.py tools/measurement4mask.py tools/
 COPY flask-app.py .
 
-RUN addgroup --system --gid 1001 flask
-RUN adduser --system --uid 1001 flask
-RUN chown --recursive flask:flask .
-USER flask:flask
+# Set workdir owned by root group and readable by group
+# https://www.redhat.com/en/blog/a-guide-to-openshift-and-uids
+RUN chown --recursive :0 .
+RUN chmod --recursive g+r .
 
 CMD flask --app flask-app.py run --host=0.0.0.0
