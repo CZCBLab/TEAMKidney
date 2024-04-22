@@ -30,6 +30,6 @@ COPY flask-app.py .
 RUN addgroup --system --gid 1001 flask
 RUN adduser --system --uid 1001 flask
 RUN chown --recursive flask:flask .
-USER flask
+USER flask:flask
 
 CMD flask --app flask-app.py run --host=0.0.0.0
