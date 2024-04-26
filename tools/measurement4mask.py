@@ -304,6 +304,13 @@ def GBM_measures_cal(GBM_ins):
         else:
             GBM_seg_dic['GBM_mean_width'] = 0
 
+    if not 'GBM_mean_width' in GBM_seg_dic:
+        # Once the measurement parameters are tuned to the input pixel size, the second sentence
+        # in this message (re: image resolution) will no longer apply. For now, since the measurement
+        # parameters are hardcoded, the resolution is likely to be the problem.
+        # BTW also means that higher resolution will have more false positives?
+        raise Exception("GBM_n was non-zero but mean width could not be measured. It is possible that your image resolution is too low.")
+
     ## calculate the FP width
     # ins_dilated = ins_dilated.astype(np.uint8)
 
