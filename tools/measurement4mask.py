@@ -222,7 +222,7 @@ def find_longest_path_band(skeleton):
         skeleton, skel_len = find_longest_path(skeleton_bool, bifurcation_coords, endpoint_coords)
     return skeleton, skel_len
 
-def GBM_measures_cal(GBM_ins, normal_pixel):
+def GBM_measures_cal(GBM_ins, pixelsize, normal_pixel):
     # GBM_id = 0
     im_shape = GBM_ins.shape[0:2]
 
@@ -269,10 +269,13 @@ def GBM_measures_cal(GBM_ins, normal_pixel):
         skeleton_img = np.maximum(skeleton_img, skeleton.astype(np.uint8))
         GBM_seg_dic['skeleton_length'] = GBM_seg_dic['skeleton_length'] + skel_len
         GBM_seg_dic['area'] = GBM_seg_dic['area'] + np.sum(ins)
-        if GBM_seg_dic['skeleton_length']:
-            GBM_seg_dic['GBM_mean_width'] = GBM_seg_dic['area']/GBM_seg_dic['skeleton_length']
-        else:
-            GBM_seg_dic['GBM_mean_width'] = 0
+    if GBM_seg_dic['skeleton_length']:
+        GBM_seg_dic['GBM_mean_width'] = GBM_seg_dic['area']/GBM_seg_dic['skeleton_length']
+    else:
+        GBM_seg_dic['GBM_mean_width'] = 0
+    GBM_seg_dic['skeleton_length'] = GBM_seg_dic['skeleton_length'] * pixelsize
+    GBM_seg_dic['GBM_mean_width'] = GBM_seg_dic['GBM_mean_width'] * pixelsize
+    GBM_seg_dic['area'] = GBM_seg_dic['area'] * pixelsize * pixelsize
 
     return GBM_im_new, skeleton_img, GBM_seg_dic
 
@@ -335,7 +338,7 @@ def save_maskon_image(image, GBM_img, FP_img, skeleton_img, FP_width_img, outfil
     overlayed_image = (image_rgb * (1 - alpha) + colored_mask * alpha).astype(np.uint8)
     Image.fromarray(overlayed_image).save(outfile)
 
-def FP_measures_cal(GBM_ins, FP_ins, normal_pixel):
+def FP_measures_cal(GBM_ins, FP_ins, pixelsize, normal_pixel):
 
     im_shape = FP_ins.shape[0:2]
     SDheight = round(min(int(normal_pixel / 2), min(im_shape)/20))
@@ -379,13 +382,13 @@ def FP_measures_cal(GBM_ins, FP_ins, normal_pixel):
 
             FP_seg_pos = np.where(FP_width_pos == FP_seg_ids[j])
             FP_seg_dic['FP_mean_width'] = FP_seg_dic['FP_mean_width'] + len(FP_seg_pos[0])
-            FP_widths.append(len(FP_seg_pos[0]))
+            FP_widths.append(pixelsize*len(FP_seg_pos[0]))
 
 
     if FP_seg_dic['FP_num'] == 0:
         FP_seg_dic['FP_mean_width'] = 0
     else:
-        FP_seg_dic['FP_mean_width'] = FP_seg_dic['FP_mean_width']/FP_seg_dic['FP_num']
+        FP_seg_dic['FP_mean_width'] = pixelsize * FP_seg_dic['FP_mean_width']/FP_seg_dic['FP_num']
 
     return FP_width_img, FP_seg_dic, FP_widths
     # return show_im, FP_width_list
@@ -399,8 +402,8 @@ def main():
     outCSV = './test_data/width.csv'
     outfig = './test_data/figs'
     outjson = './test_data/FPwidths.json'
-    # pixelsize = 4.122 ## nm
-    pixelsize = 4.122*3
+    pixelsize = 4.122 ## nm
+    # pixelsize = 4.122*3
     # pixelsize = 4.122/3  ## nm
 
     normal_pixel = 320/pixelsize
@@ -445,8 +448,8 @@ def main():
 
         im_dict = {"image_id": file.split('.')[0]}
         # try:
-        GBM_im_new, skeleton_img, GBM_info = GBM_measures_cal(GBM_ins, normal_pixel)
-        FP_width_img, FP_info, FP_widths = FP_measures_cal(GBM_ins, FP_ins, normal_pixel)
+        GBM_im_new, skeleton_img, GBM_info = GBM_measures_cal(GBM_ins, pixelsize, normal_pixel)
+        FP_width_img, FP_info, FP_widths = FP_measures_cal(GBM_ins, FP_ins, pixelsize, normal_pixel)
         width_info_list.append({**im_dict, **GBM_info, **FP_info})
         outfile = os.path.join(outfig, file.split('.')[0]+'.png')
 
