@@ -207,16 +207,6 @@ def find_longest_path_band(skeleton):
     endpoints = find_endpoints(skeleton)
     bifurcation_points = find_bifurcation_points(skeleton)
 
-    # 获取端点和分叉点的坐标
-    # y_endpoints, x_endpoints = np.where(endpoints)
-    # y_bifurcation, x_bifurcation = np.where(bifurcation_points)
-
-    # plt.imshow(skeleton, cmap='gray')
-    # plt.scatter(x_endpoints, y_endpoints, color='r', s=10)  # 端点用红色标记
-    # plt.scatter(x_bifurcation, y_bifurcation, color='g', s=10)  # 分叉点用绿色标记
-    # plt.title('Skeleton with Endpoints and Bifurcation Points')
-    # plt.axis('off')
-    # plt.show()
 
     skeleton_bool = skeleton.astype(bool)
     endpoint_coords = list(zip(*np.where(endpoints)))
@@ -232,18 +222,9 @@ def find_longest_path_band(skeleton):
         skeleton, skel_len = find_longest_path(skeleton_bool, bifurcation_coords, endpoint_coords)
     return skeleton, skel_len
 
-def GBM_measures_cal(GBM_ins):
+def GBM_measures_cal(GBM_ins, pixelsize, normal_pixel):
     # GBM_id = 0
     im_shape = GBM_ins.shape[0:2]
-    # kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10))
-    # GBM_im = cv2.morphologyEx(GBM_im, cv2.MORPH_CLOSE, kernel, iterations=1)
-    #
-    # kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10))
-    # GBM_im = cv2.morphologyEx(GBM_im, cv2.MORPH_OPEN, kernel, iterations=1)
-
-    # kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (10, 10))
-    # GBM_im = cv2.morphologyEx(GBM_im, cv2.MORPH_OPEN, kernel, iterations=1)
-
 
     GBM_ins = measure.label(GBM_ins, connectivity=2)
     GBM_n = np.max(GBM_ins)
@@ -265,16 +246,15 @@ def GBM_measures_cal(GBM_ins):
         ins[np.where(GBM_ins == i+1)] = True
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10))
         ins = cv2.morphologyEx(ins, cv2.MORPH_CLOSE, kernel, iterations=1)
-        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (GBM_dilation_kernel_size, GBM_dilation_kernel_size))
-        ins_dilated = cv2.dilate(ins, kernel, iterations=1)
+
         ins = ins.astype(np.uint8)
-        if np.sum(ins) < 1000:
-            print(f"in loop {i}/{GBM_n}, np.sum(ins) was < 1000, continuing")
+        if np.sum(ins) < normal_pixel*12.5:
+            # print(i)
             continue
         GBM_im_new = np.maximum(GBM_im_new, ins)
         skeleton = skeletonize(ins)
-        if np.sum(skeleton) < 500:
-            print(f"in loop {i}/{GBM_n}, np.sum(skeleton) was < 500, continuing")
+        if np.sum(skeleton) < normal_pixel*6:
+            # print(i)
             continue
 
         GBM_contours = cv2.findContours(ins, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -292,39 +272,13 @@ def GBM_measures_cal(GBM_ins):
         skeleton_img = np.maximum(skeleton_img, skeleton.astype(np.uint8))
         GBM_seg_dic['skeleton_length'] = GBM_seg_dic['skeleton_length'] + skel_len
         GBM_seg_dic['area'] = GBM_seg_dic['area'] + np.sum(ins)
-        # GBM_seg_dic['GBM_area'] = len(mask_pos[0])
-        # GBM_seg_dic['GBM_mean_width'] = len(mask_pos[0])/len(pos[0])
-
-        # TODO: Ask Anqi whether this isn't supposed to be outside the loop perhaps.
-        # Otherwise, if hit 'continue' every time (see above) then we have
-        # (1) no "no GBM found" exception, but also (2) no GBM_seg_dic['GBM_mean_width'] value etc.
-        # Also TODO remove print statements above after conferring.
-        if GBM_seg_dic['skeleton_length']:
-            GBM_seg_dic['GBM_mean_width'] = GBM_seg_dic['area']/GBM_seg_dic['skeleton_length']
-        else:
-            GBM_seg_dic['GBM_mean_width'] = 0
-
-    if not 'GBM_mean_width' in GBM_seg_dic:
-        # Once the measurement parameters are tuned to the input pixel size, the second sentence
-        # in this message (re: image resolution) will no longer apply. For now, since the measurement
-        # parameters are hardcoded, the resolution is likely to be the problem.
-        # BTW also means that higher resolution will have more false positives?
-        raise Exception("GBM_n was non-zero but mean width could not be measured. It is possible that your image resolution is too low.")
-
-    ## calculate the FP width
-    # ins_dilated = ins_dilated.astype(np.uint8)
-
-    # edges = cv2.Canny(ins_dilated.astype(np.uint8), 0, 0.15)
-    # label_img = label(edges, connectivity=edges.ndim)
-    # props = regionprops(label_img)
-    # print('done!')
-    # xcoords = props[k].coords[:, 0]
-    # ycoords = props[k].coords[:, 1]
-    # edge_vals = np.empty((len(xcoords)), dtype='int_')
-    # for i in range(0, len(xcoords)):
-    #     edge_vals[i] = orig[xcoords[i]][ycoords[i]]
-    # return edge_vals
-
+    if GBM_seg_dic['skeleton_length']:
+        GBM_seg_dic['GBM_mean_width'] = GBM_seg_dic['area']/GBM_seg_dic['skeleton_length']
+    else:
+        GBM_seg_dic['GBM_mean_width'] = 0
+    GBM_seg_dic['skeleton_length'] = GBM_seg_dic['skeleton_length'] * pixelsize
+    GBM_seg_dic['GBM_mean_width'] = GBM_seg_dic['GBM_mean_width'] * pixelsize
+    GBM_seg_dic['area'] = GBM_seg_dic['area'] * pixelsize * pixelsize
 
     return GBM_im_new, skeleton_img, GBM_seg_dic
 
@@ -388,19 +342,18 @@ def save_maskon_image(image, GBM_img, FP_img, skeleton_img, FP_width_img, outfil
     #Image.fromarray(overlayed_image).save(outfile)
     return Image.fromarray(overlayed_image)
 
-def FP_measures_cal(GBM_ins, FP_ins):
+def FP_measures_cal(GBM_ins, FP_ins, pixelsize, normal_pixel):
+
     im_shape = FP_ins.shape[0:2]
-    # n_GBM = len(GBM_ins)
-    FP_in = np.zeros(im_shape)
+    SDheight = round(min(int(normal_pixel / 2), min(im_shape)/20))
+    if SDheight <= 3:
+        SDheight = 2
     GBM_in = np.zeros(im_shape)
-    # color_mask = np.array([0, 255, 255], dtype=np.uint8)
-    # n_GBM = len(GBM_ins)
     n_GBM = np.max(GBM_ins)
     if n_GBM == 0:
         #print("There is no GBM in this image!")
         #return 1
         raise Exception("There is no GBM in this image!")
-    FP_seg_width = []
     FP_seg_dic = {}
     FP_seg_dic['FP_num'] = 0
     FP_seg_dic['FP_mean_width'] = 0
@@ -409,13 +362,13 @@ def FP_measures_cal(GBM_ins, FP_ins):
     for i in range(n_GBM):
         GBM_in[np.where(GBM_ins == i + 1)] = True
         GBM_in[np.where(GBM_ins != i + 1)] = False
-        if np.sum(GBM_in) < 1000:
+        if np.sum(GBM_in) < normal_pixel*12.5:
             continue
         skeleton = skeletonize(GBM_in)
-        if np.sum(skeleton) < 500:
+        if np.sum(skeleton) < normal_pixel*6:
             continue
 
-        kernel = np.ones((35,35),dtype=np.uint8)
+        kernel = np.ones((SDheight,SDheight),dtype=np.uint8)
         GBM_in_dilated = cv2.dilate(GBM_in, kernel,1) # dilate the GBM to calculate the FP
         GBM_in_dilated = GBM_in_dilated.astype(np.uint8)
         GBM_contour_dilated, h = cv2.findContours(GBM_in_dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
@@ -430,23 +383,16 @@ def FP_measures_cal(GBM_ins, FP_ins):
         FP_seg_ids = FP_seg_ids[FP_seg_ids != 0]
         FP_seg_dic['FP_num'] = FP_seg_dic['FP_num'] + len(FP_seg_ids)
         for j in range(len(FP_seg_ids)):
-            # FP_seg_id = FP_seg_ids[j]-1 #
-            # FP_seg_dic = {}  #
-            # FP_seg_dic['GBM_id'] = GBM_ins[i]['id']
-            # FP_seg_dic['FP_id'] = FP_seg_id
+
             FP_seg_pos = np.where(FP_width_pos == FP_seg_ids[j])
             FP_seg_dic['FP_mean_width'] = FP_seg_dic['FP_mean_width'] + len(FP_seg_pos[0])
-            FP_widths.append(len(FP_seg_pos[0]))
+            FP_widths.append(pixelsize*len(FP_seg_pos[0]))
 
-            # FP_seg_dic['FP_width_point'] = FP_seg_pos # width line points of the j th FP along the i th GBM
-            # FP_seg_dic['FP_width'] = len(FP_seg_pos[0]) # width value of the j th FP along the i th GBM
-            # FP_area = np.where(FP_ins == FP_seg_id+1)
-            # FP_seg_dic['FP_area'] = len(FP_area[0])
-            # FP_width_list.append(FP_seg_dic)
+
     if FP_seg_dic['FP_num'] == 0:
         FP_seg_dic['FP_mean_width'] = 0
     else:
-        FP_seg_dic['FP_mean_width'] = FP_seg_dic['FP_mean_width']/FP_seg_dic['FP_num']
+        FP_seg_dic['FP_mean_width'] = pixelsize * FP_seg_dic['FP_mean_width']/FP_seg_dic['FP_num']
 
     return FP_width_img, FP_seg_dic, FP_widths
     # return show_im, FP_width_list
@@ -454,6 +400,20 @@ def FP_measures_cal(GBM_ins, FP_ins):
 
 
 def main(inputimage, inputseg, inputfilepath):
+
+    pixelsize = 4.122 ## nm
+    # pixelsize = 4.122*3
+    # pixelsize = 4.122/3  ## nm
+
+    normal_pixel = 320/pixelsize
+
+    GBMkernelsize = min(int(normal_pixel/8.5), 20)
+
+    if GBMkernelsize<=3:
+        GBMkernelsize = 2
+        print('The image resulution is too low, accuracy may be unaccuracy!')
+    FPkernelsize = round(1.5* GBMkernelsize)
+
     width_info_list = []
     FP_widths_json = []
 
@@ -466,20 +426,26 @@ def main(inputimage, inputseg, inputfilepath):
     # Note: CV2 reads images to ABGR order (why?!) whereas np.asarray will read to RGB(A).
     # So, in the following code, I have flipped the minor axis indices in Anqi's conditionals.
 
+    # TODO: Check axes... and change message system to append, and add this to message.
+    #if normal_pixel >= min(segimage.shape[0], segimage.shape[1])/3: #BGR
+    if normal_pixel >= min(segimage.shape[2], segimage.shape[1])/3: #RGB
+        #print('The image resolution is too high, and the measurement result may be inaccurate!')
+        print('The image resolution is too high, and the measurement result may be inaccurate!')
+
     GBM_im = np.zeros(segimage.shape[0:2])
     #GBM_im[(segimage[:, :, 2] > 0) & (segimage[:, :, 1] == 0) & (segimage[:, :, 0] == 0)] = True # BGR
     GBM_im[(segimage[:, :, 0] > 0) & (segimage[:, :, 1] == 0) & (segimage[:, :, 2] == 0)] = True # RGB
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10))
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (GBMkernelsize, GBMkernelsize))
     GBM_im = cv2.morphologyEx(GBM_im, cv2.MORPH_CLOSE, kernel, iterations=1)
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10))
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (GBMkernelsize, GBMkernelsize))
     GBM_im = cv2.morphologyEx(GBM_im, cv2.MORPH_OPEN, kernel, iterations=1)
     GBM_ins = measure.label(GBM_im, connectivity=2)
 
     FP_im = np.zeros(segimage.shape[0:2])
     #FP_im[(segimage[:, :, 0] > 0) & (segimage[:, :, 1] == 0) & (segimage[:, :, 2] == 0)] = True # BGR
     FP_im[(segimage[:, :, 2] > 0) & (segimage[:, :, 1] == 0) & (segimage[:, :, 0] == 0)] = True # RGB
-    # Erode the FP to separate some close FPs, should be dilated later
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (FP_openning_kernel_size, FP_openning_kernel_size))
+    # open the FP to separate some close FPs, should be dilated later
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (FPkernelsize, FPkernelsize))
     FP_im = cv2.morphologyEx(FP_im, cv2.MORPH_OPEN, kernel, iterations=1)
     FP_ins = measure.label(FP_im, connectivity=1)
 
@@ -487,8 +453,8 @@ def main(inputimage, inputseg, inputfilepath):
     im_dict = {"image_id": image_id}
 
     try:
-        GBM_im_new, skeleton_img, GBM_info = GBM_measures_cal(GBM_ins)
-        FP_width_img, FP_info, FP_widths = FP_measures_cal(GBM_ins, FP_ins)
+        GBM_im_new, skeleton_img, GBM_info = GBM_measures_cal(GBM_ins, pixelsize, normal_pixel)
+        FP_width_img, FP_info, FP_widths = FP_measures_cal(GBM_ins, FP_ins, pixelsize, normal_pixel)
         success = True
         message = "OK"
     except Exception as e:
