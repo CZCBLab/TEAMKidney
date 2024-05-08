@@ -400,6 +400,7 @@ def FP_measures_cal(GBM_ins, FP_ins, pixelsize, normal_pixel):
 
 
 def main(inputimage, inputseg, inputfilepath):
+    message = ""
 
     pixelsize = 4.122 ## nm
     # pixelsize = 4.122*3
@@ -411,7 +412,7 @@ def main(inputimage, inputseg, inputfilepath):
 
     if GBMkernelsize<=3:
         GBMkernelsize = 2
-        print('The image resulution is too low, accuracy may be unaccuracy!')
+        message += "The image resolution is too low, and the measurement result may be inaccurate! "
     FPkernelsize = round(1.5* GBMkernelsize)
 
     width_info_list = []
@@ -426,11 +427,9 @@ def main(inputimage, inputseg, inputfilepath):
     # Note: CV2 reads images to ABGR order (why?!) whereas np.asarray will read to RGB(A).
     # So, in the following code, I have flipped the minor axis indices in Anqi's conditionals.
 
-    # TODO: Check axes... and change message system to append, and add this to message.
     #if normal_pixel >= min(segimage.shape[0], segimage.shape[1])/3: #BGR
     if normal_pixel >= min(segimage.shape[2], segimage.shape[1])/3: #RGB
-        #print('The image resolution is too high, and the measurement result may be inaccurate!')
-        print('The image resolution is too high, and the measurement result may be inaccurate!')
+        message += "The image resolution is too high, and the measurement result may be inaccurate! "
 
     GBM_im = np.zeros(segimage.shape[0:2])
     #GBM_im[(segimage[:, :, 2] > 0) & (segimage[:, :, 1] == 0) & (segimage[:, :, 0] == 0)] = True # BGR
@@ -456,11 +455,11 @@ def main(inputimage, inputseg, inputfilepath):
         GBM_im_new, skeleton_img, GBM_info = GBM_measures_cal(GBM_ins, pixelsize, normal_pixel)
         FP_width_img, FP_info, FP_widths = FP_measures_cal(GBM_ins, FP_ins, pixelsize, normal_pixel)
         success = True
-        message = "OK"
+        message = message or "OK."
     except Exception as e:
         # If x_measures_cal throws exception (e.g. no GBM in this image), forward that message through...
         success = False
-        message = str(e)
+        message += str(e)
         return success, message, None, None, None
 
     width_info_list.append({**im_dict, **GBM_info, **FP_info})
