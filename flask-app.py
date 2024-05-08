@@ -17,7 +17,12 @@ s3 = boto3.resource('s3')
 def predict():
     inputfilepath = request.form.get('filename')
     if not inputfilepath:
-        return "Bad request - missing filename in request form"
+        return json.dumps({"status": 500, "message": "Bad request - missing filename in request form"})
+
+    try:
+        pixelsize = float(request.form.get("pixelsize")) # nm
+    except:
+        return json.dumps({"status": 500, "message": "Bad request - missing or malformed pixel size in request form"})
 
     obj = s3.Object(bucket_name=os.environ["AWS_S3_BUCKET_NAME"], key=inputfilepath)
     response = obj.get()
@@ -29,7 +34,7 @@ def predict():
         #pred.show()
         #masked.show()
         #print("Calling measurement...")
-        success, msg, measurement_masked_img, fp_widths_json, width_info_list = measurement(img, pred, inputfilepath)
+        success, msg, measurement_masked_img, fp_widths_json, width_info_list = measurement(img, pred, inputfilepath, pixelsize)
         #measurement_masked_img.show()
 
         if not success:
@@ -71,17 +76,8 @@ def predict():
         "FP_num": int(width_info['FP_num']),
         "FP_mean_width": float(width_info['FP_mean_width']),
         "FP_widths": width_info['FP_widths'],
-        # The measurement code returns values in units of pixels.
-        # Chao said to just convert to the user's specified units at the time when the result
-        # is displayed to the user, that is, in the web client code.
-        # However, a stored prediction result is useless without a pixel size conversion factor,
-        # so we will also save the conversion information here in the json.
-        # Bearing in mind that we probably want the stored results to be easily bulk-processable
-        # in future, I suspect it is better to keep the values above in pixels and store
-        # both a conversion factor and a "unit" text field, rather than convert the values now
-        # and store only the unit.
-        "pixel_size": request.form.get("pixelsize", "unspecified"),
-        "pixel_size_unit": request.form.get("pixelsizeunit", "unspecified"),
+        "pixel_size": pixelsize,
+        "unit": "nm", # All (numerical, non-enumerative) fields in this dict are expressed in this unit.
 
         # Metadata: Hrm. I avoided putting metadata in the width_info_json for as long as possible.
         # But if we want to (1) support non-png input images, and someday maybe also support non-png
@@ -97,7 +93,7 @@ def predict():
 
     response_json = json.dumps({
         "status": 200,
-        "message": "OK",
+        "message": msg,
         "srcfile": inputfilepath,
     })
     return response_json

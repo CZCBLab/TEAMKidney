@@ -399,12 +399,16 @@ def FP_measures_cal(GBM_ins, FP_ins, pixelsize, normal_pixel):
 
 
 
-def main(inputimage, inputseg, inputfilepath):
+def main(inputimage, inputseg, inputfilepath, pixelsize):
     message = ""
 
-    pixelsize = 4.122 ## nm
+    # The default pixel size should be 4.122 (nm); this is not enforced here; rather,
+    # the web client's form's "pixel size" field is set to be a required field and to have this default value.
+    # pixelsize = 4.122 ## nm
     # pixelsize = 4.122*3
     # pixelsize = 4.122/3  ## nm
+
+    # TODO: Ask Anqi to confirm pixel size logic; some numbers trigger both the "too high" and "too low" warnings....
 
     normal_pixel = 320/pixelsize
 
