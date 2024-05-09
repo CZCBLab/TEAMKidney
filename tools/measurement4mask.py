@@ -428,12 +428,11 @@ def main(inputimage, inputseg, inputfilepath, pixelsize):
     #segimage = cv2.imdecode(np.asarray(inputseg), cv2.IMREAD_COLOR)
     # Therefore instead of cv2, just read as np array:
     segimage = np.asarray(inputseg)
+    if normal_pixel >= min(segimage.shape[0], segimage.shape[1])/3:
+        message += "The image resolution is too high, and the measurement result may be inaccurate! "
+
     # Note: CV2 reads images to ABGR order (why?!) whereas np.asarray will read to RGB(A).
     # So, in the following code, I have flipped the minor axis indices in Anqi's conditionals.
-
-    #if normal_pixel >= min(segimage.shape[0], segimage.shape[1])/3: #BGR
-    if normal_pixel >= min(segimage.shape[2], segimage.shape[1])/3: #RGB
-        message += "The image resolution is too high, and the measurement result may be inaccurate! "
 
     GBM_im = np.zeros(segimage.shape[0:2])
     #GBM_im[(segimage[:, :, 2] > 0) & (segimage[:, :, 1] == 0) & (segimage[:, :, 0] == 0)] = True # BGR
