@@ -32,4 +32,4 @@ COPY flask-app.py .
 RUN chown --recursive :0 .
 RUN chmod --recursive g+r .
 
-CMD flask --app flask-app.py run --host=0.0.0.0
+CMD flask --app flask-app.py run --host=0.0.0.0 --port 5000
