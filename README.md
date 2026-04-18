@@ -44,24 +44,24 @@ This project implements a two-stage pipeline for automated ultrastructure analys
 ---
 
 ## 📂 Project Structure  
-
+```
 .  
-|── data/                         # Dataset directory  
-|   └── images/                  # Input TEM images  
-|  
-├── mytools/                     # Core pipeline scripts  
-│   ├── segmentation.py         # Step 1: Panoptic segmentation (Mask2Former)  
-│   └── measurement.py          # Step 2: GBM & FP measurement  
-│
-├── myconfigs/                   # Model configuration files  
-├── models/                      # Pretrained model checkpoints  
-├── mmdet/                       # MMDetection source code  
-├── requirements/                # Dependency files  
-├── results/                     # Output directory  
-├── examples/                    # Example images  
-│   └── workflow.jpg  
-└── README.md  
-
+├── data/                        # Dataset directory   
+│   └── images/                  # Input TEM images   
+│   
+├── mytools/                     # Core pipeline scripts   
+│   ├── segmentation.py          # Step 1: Panoptic segmentation (Mask2Former)   
+│   └── measurement.py           # Step 2: GBM & FP measurement   
+│   
+├── myconfigs/                   # Model configuration files   
+├── models/                      # Pretrained model checkpoints   
+├── mmdet/                       # MMDetection source code   
+├── requirements/                # Dependency files   
+├── results/                     # Output directory   
+├── examples/                    # Example images   
+│   └── workflow.jpg   
+└── README.md   
+```
 ---
 
 ## ⚙️ Installation
@@ -206,11 +206,11 @@ These visualizations are useful for:
 If you use this code, please cite:
 
 ```bibtex
-@article{zou2025tem,
+@article{zou2026tem,
   title={Deep Learning Enables Automated Segmentation and Quantification of Ultrastructure from Transmission Electron Microscopy Images},
-  author={Zou, Anqi and Tan, Winston and Ji, Jiayi and Rojas-Miguez, Florencia and Dodd, Laura and Oei, Emily and Chen, Hui and Henderson, Joel M. and Fan, Xueping and Lu, Weining and Zhang, Chao},
+  	author = {Zou, Anqi and Tan, Winston and Ji, Jiayi and Rojas-Miguez, Florencia and Dodd, Laura and Oei, Emily and Vargas, Sarah R. and Yang, Hongying and Berasi, Stephen P. and Chen, Hui and Henderson, Joel M. and Fan, Xueping and Lu, Weining and Zhang, Chao},
   journal={bioRxiv},
-  year={2025},
+  year={2026},
   doi={10.1101/2025.11.05.686793}
 }
 ```
