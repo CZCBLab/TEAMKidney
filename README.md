@@ -4,7 +4,7 @@ This repository provides the official implementation of the method described in 
 
 **“Deep Learning Enables Automated Segmentation and Quantification of Ultrastructure from Transmission Electron Microscopy Images”**
 
-📄 Paper: https://www.biorxiv.org/content/10.1101/2025.11.05.686793v1  
+📄 Paper: https://www.biorxiv.org/content/10.1101/2025.11.05.686793v2
 
 This work presents an automated deep learning-based framework for accurate and scalable segmentation and quantification of kidney ultrastructures, including glomerular basement membrane (GBM) and podocyte foot processes (FP), from transmission electron microscopy (TEM) images. :contentReference[oaicite:0]{index=0}  
 
